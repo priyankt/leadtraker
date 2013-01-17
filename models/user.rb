@@ -14,7 +14,7 @@ property :id, Serial
   property :state, String
   property :zip, String
   property :created_on, DateTime
-  property :type , Integer, :required => true, :default => 1
+  property :type , Integer, :required => true
   property :user_key, String
  
   # has n, :invitations, :child_key => [ :source_id ]

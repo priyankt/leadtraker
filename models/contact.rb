@@ -12,6 +12,6 @@ class Contact
   property :company, String
   property :title, String
 
-  belongs_to :lead
+  has n, :leads
 
 end

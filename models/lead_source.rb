@@ -6,7 +6,6 @@ class LeadSource
   property :name, String, :required => true
   property :description, Text
 
-  belongs_to :leadType
   has n, :leads
 
 end

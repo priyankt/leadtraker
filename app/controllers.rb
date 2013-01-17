@@ -90,9 +90,105 @@ Leadtraker.controllers  do
       newUser[:passwd] = BCrypt::Engine.hash_secret(passwd, newUser[:salt])
       # generate random key
       newUser[:user_key] = UUIDTools::UUID.random_create
+      
+
+      if params.has_key?("type")
+        if newUser[:type] == 1
+          newUser[:leadTypes] = [
+            {
+              :name => 'Buyer',
+              :leadStages => [
+                {:name => 'Appointment'},
+                {:name => 'Listing'},
+                {:name => 'Contract'},
+                {:name => 'Closed'},
+              ],
+              :leadSources => [
+                {:name => 'VoicePad'},
+                {:name => 'Realtor.com'},
+                {:name => 'Sign Call'},
+                {:name => 'Referral'},
+                {:name => 'HomeCards'},
+                {:name => 'Web Site'},
+              ]
+            },
+            {
+              :name => 'Seller',
+              :leadStages => [
+                {:name => 'Appointment'},
+                {:name => 'Listing'},
+                {:name => 'Contract'},
+                {:name => 'Closed'},
+              ],
+              :leadSources => [
+                {:name => 'VoicePad'},
+                {:name => 'Realtor.com'},
+                {:name => 'Sign Call'},
+                {:name => 'Referral'},
+                {:name => 'HomeCards'},
+                {:name => 'Web Site'},
+              ]
+            }
+          ]
+        else
+          newUser[:leadTypes] = [
+          {
+            :name => 'Purchase',
+            :leadStages => [
+              {:name => 'Application'},
+              {:name => 'Pull Credit Report'},
+              {:name => 'Initial Docs List'},
+              {:name => 'Pre-Approved Letter'},
+              {:name => 'Under Contract'},
+              {:name => 'Initial Disclosures'},
+              {:name => 'Updated Docs List'},
+              {:name => 'Submit to Processing'},
+              {:name => 'Appraisal'},
+              {:name => 'Initial underwriting'},
+              {:name => 'Collect Conditions'},
+              {:name => 'Submit for CtoC'},
+              {:name => 'Documents'},
+              {:name => 'Closed'},
+            ],
+            :leadSources => [
+              {:name => 'Agent Referral'},
+              {:name => 'ePropertySites'},
+              {:name => 'Web Site'},
+              {:name => 'Referral'},
+              {:name => 'Past Client'},
+            ]
+          },
+          {
+            :name => 'Re-Finance',
+            :leadStages => [
+              {:name => 'Application'},
+              {:name => 'Pull Credit Report'},
+              {:name => 'Initial Docs List'},
+              {:name => 'Initial Disclosures'},
+              {:name => 'Updated Docs List'},
+              {:name => 'Submit to Processing'},
+              {:name => 'Appraisal'},
+              {:name => 'Initial underwriting'},
+              {:name => 'Collect Conditions'},
+              {:name => 'Submit for CtoC'},
+              {:name => 'Documents'},
+              {:name => 'Closed'},
+            ],
+            :leadSources => [
+              {:name => 'Past Client'},
+              {:name => 'Referral'},
+              {:name => 'Sign Call'},
+              {:name => 'Agent Referral'},
+              {:name => 'Web Site'},
+            ]
+          }
+        ]
+        end
+      end
+      
       # create user object
       user = User.new(newUser)
-
+      
       # if user is valid, then save to db
       if user.valid?
         user.save
@@ -124,6 +220,11 @@ Leadtraker.controllers  do
     @users = User.all(:order => [:id.desc], :limit => 20)
     @users.to_json(:exclude => [:passwd, :salt, :user_key ])
     #@users.to_json
+  end
+
+  get '/leadtypes' do
+    @leadTypes = LeadType.all()
+    @leadTypes.to_json()
   end
 
   get '/api/1' do

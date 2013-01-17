@@ -6,7 +6,8 @@ class Lead
   property :reference, String
   property :status, Integer
 
+  belongs_to :contact
   #belongs_to :leadSource
-  belongs_to :leadType
+  #has 1, :leadType, {:through => DataMapper::Resource}
   
 end

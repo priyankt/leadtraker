@@ -7,7 +7,8 @@ class LeadType
   property :description, Text
 
   belongs_to :user
-  has n, :leadSources, :through => Resource
-  has n, :leadStages, :through => Resource
   
+  has n, :leadSources
+  has n, :leadStages
+
 end
