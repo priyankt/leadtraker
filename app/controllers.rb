@@ -192,6 +192,8 @@ Leadtraker.controllers  do
       # if user is valid, then save to db
       if user.valid?
         user.save
+	# rescue DataMapper::SaveFailureError => e
+	# logger.error e.resource.errors.inspect
         ret = {:success => 1, :user_key => newUser[:user_key]}
         status 201
       else
