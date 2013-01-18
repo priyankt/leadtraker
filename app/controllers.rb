@@ -1,6 +1,7 @@
 require 'bcrypt'
 require 'uuidtools'
 require 'dm-serializer/to_json'
+require 'json'
 
 Leadtraker.controllers  do
   # get :index, :map => "/foo/bar" do
@@ -204,6 +205,66 @@ Leadtraker.controllers  do
 
       ret.to_json
 
+  end
+
+  get '/api/types' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ''}
+    else
+      leadTypes = user.leadTypes.all()
+      ret = {:success => 1, :errors => '', :lead_types => leadTypes}
+    end
+    ret.to_json
+  end
+
+  post '/api/types' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ''}
+    else
+      lead_types = JSON.parse params[:types]
+      user.leadTypes << lead_types
+      if user.valid?
+        user.save
+        # rescue DataMapper::SaveFailureError => e
+        # logger.error e.resource.errors.inspect
+        ret = {:success => 1}
+        status 201
+      else
+        errors = user.errors.to_hash
+        ret = {:success => 0, :errors => errors}
+        status 412
+      end
+    end
+
+    ret.to_json
+  end
+
+  get '/api/sources/:id' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ''}
+    else
+      leadSources = user.leadTypes(:id => params[:id]).leadSources.all()
+      ret = {:success => 1, :errors => '', :sources => leadSources}
+    end
+    ret.to_json
+  end
+
+  get '/api/stages/:id' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ''}
+    else
+      leadStages = user.leadTypes(:id => params[:id]).leadStages.all()
+      ret = {:success => 1, :errors => '', :stages => leadStages}
+    end
+    ret.to_json
   end
 
   get '/logout' do
