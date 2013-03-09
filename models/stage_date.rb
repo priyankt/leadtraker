@@ -1,11 +1,13 @@
-class LeadSource
+class StageDate
   include DataMapper::Resource
 
   # property <name>, <type>
   property :id, Serial
-  property :name, String, :required => true
-  property :description, Text
+  property :dttm, DateTime
   property :created_at, DateTime
   property :updated_at, DateTime
+
+  belongs_to :lead
+  belongs_to :leadStage
   
 end

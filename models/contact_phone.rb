@@ -1,11 +1,15 @@
-class LeadSource
+class ContactPhone
   include DataMapper::Resource
 
   # property <name>, <type>
   property :id, Serial
-  property :name, String, :required => true
-  property :description, Text
+  property :phone, String
+
+  belongs_to :contact
+  belongs_to :phoneType
+
   property :created_at, DateTime
   property :updated_at, DateTime
-  
+
+
 end

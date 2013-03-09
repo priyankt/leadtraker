@@ -1,11 +1,13 @@
-class LeadSource
+class UserInvitation
   include DataMapper::Resource
 
   # property <name>, <type>
   property :id, Serial
-  property :name, String, :required => true
-  property :description, Text
+  property :from_user, String
+  property :to_user, String
+  property :status, Integer
+
   property :created_at, DateTime
   property :updated_at, DateTime
-  
+
 end

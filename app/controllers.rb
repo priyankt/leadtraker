@@ -4,20 +4,6 @@ require 'dm-serializer/to_json'
 require 'json'
 
 Leadtraker.controllers  do
-  # get :index, :map => "/foo/bar" do
-  #   session[:foo] = "bar"
-  #   render 'index'
-  # end
-
-  # get :sample, :map => "/sample/url", :provides => [:any, :js] do
-  #   case content_type
-  #     when :js then ...
-  #     else ...
-  # end
-
-  # get :foo, :with => :id do
-  #   "Maps to url '/foo/#{params[:id]}'"
-  # end
 
   before do
 
@@ -91,7 +77,6 @@ Leadtraker.controllers  do
       newUser[:passwd] = BCrypt::Engine.hash_secret(passwd, newUser[:salt])
       # generate random key
       newUser[:user_key] = UUIDTools::UUID.random_create
-      
 
       if params.has_key?("type")
         if newUser[:type] == 1
@@ -104,14 +89,6 @@ Leadtraker.controllers  do
                 {:name => 'Contract'},
                 {:name => 'Closed'},
               ],
-              :leadSources => [
-                {:name => 'VoicePad'},
-                {:name => 'Realtor.com'},
-                {:name => 'Sign Call'},
-                {:name => 'Referral'},
-                {:name => 'HomeCards'},
-                {:name => 'Web Site'},
-              ]
             },
             {
               :name => 'Seller',
@@ -121,15 +98,15 @@ Leadtraker.controllers  do
                 {:name => 'Contract'},
                 {:name => 'Closed'},
               ],
-              :leadSources => [
-                {:name => 'VoicePad'},
-                {:name => 'Realtor.com'},
-                {:name => 'Sign Call'},
-                {:name => 'Referral'},
-                {:name => 'HomeCards'},
-                {:name => 'Web Site'},
-              ]
             }
+          ]
+          newUser[:leadSources] = [
+            {:name => 'VoicePad'},
+            {:name => 'Realtor.com'},
+            {:name => 'Sign Call'},
+            {:name => 'Referral'},
+            {:name => 'HomeCards'},
+            {:name => 'Web Site'},
           ]
         else
           newUser[:leadTypes] = [
@@ -151,13 +128,6 @@ Leadtraker.controllers  do
               {:name => 'Documents'},
               {:name => 'Closed'},
             ],
-            :leadSources => [
-              {:name => 'Agent Referral'},
-              {:name => 'ePropertySites'},
-              {:name => 'Web Site'},
-              {:name => 'Referral'},
-              {:name => 'Past Client'},
-            ]
           },
           {
             :name => 'Re-Finance',
@@ -175,14 +145,14 @@ Leadtraker.controllers  do
               {:name => 'Documents'},
               {:name => 'Closed'},
             ],
-            :leadSources => [
-              {:name => 'Past Client'},
-              {:name => 'Referral'},
-              {:name => 'Sign Call'},
-              {:name => 'Agent Referral'},
-              {:name => 'Web Site'},
-            ]
-          }
+          },
+        ]
+        newUser[:leadSources] = [
+          {:name => 'Agent Referral'},
+          {:name => 'ePropertySites'},
+          {:name => 'Web Site'},
+          {:name => 'Referral'},
+          {:name => 'Past Client'},
         ]
         end
       end
@@ -226,6 +196,30 @@ Leadtraker.controllers  do
       ret = {:success => 0, :errors => ''}
     else
       lead_types = JSON.parse params[:types]
+      user.leadTypes << lead_types
+      if user.valid?
+        user.save
+        # rescue DataMapper::SaveFailureError => e
+        # logger.error e.resource.errors.inspect
+        ret = {:success => 1}
+        status 201
+      else
+        errors = user.errors.to_hash
+        ret = {:success => 0, :errors => errors}
+        status 412
+      end
+    end
+
+    ret.to_json
+  end
+
+  post '/api/lead' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ''}
+    else
+      lead_types = JSON.parse params[:lead]
       user.leadTypes << lead_types
       if user.valid?
         user.save
