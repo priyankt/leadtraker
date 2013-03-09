@@ -27,10 +27,6 @@ Leadtraker.controllers  do
     
   end
 
-  get '/' do
-    "This is a placeholder page for now. We will replace this with nice homepage."
-  end
-
   post '/login' do
     # get email                                                                                                                                               
     email = params[:email]
@@ -177,6 +173,43 @@ Leadtraker.controllers  do
 
   end
 
+  # delete lead stage id
+  delete '/api/stages/:id' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => 'Invalid User'}
+    else
+      stage = user.leadTypes.leadStages.get(params[:id])
+      puts stage.inspect
+      if stage.nil?
+        ret = {:success => 0, :errors => 'Invalid Lead Stage'}
+      else
+        stage.destroy
+        ret = {:success => 1}
+      end
+    end
+    
+    ret.to_json
+
+  end
+
+  # return all sources for this user
+  get '/api/sources' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ''}
+    else
+      sources = user.leadSources.all()
+      ret = {:success => 1, :errors => '', :sources => sources}
+    end
+    
+    ret.to_json
+
+  end
+
+  # return all lead types for this user
   get '/api/types' do
     user_key = env['HTTP_AUTH_KEY']
     user = User.first(:user_key => user_key)
@@ -189,6 +222,7 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
+  # add new lead type
   post '/api/types' do
     user_key = env['HTTP_AUTH_KEY']
     user = User.first(:user_key => user_key)
@@ -213,6 +247,7 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
+  # Add new lead
   post '/api/lead' do
     user_key = env['HTTP_AUTH_KEY']
     user = User.first(:user_key => user_key)
@@ -237,18 +272,7 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
-  get '/api/sources/:id' do
-    user_key = env['HTTP_AUTH_KEY']
-    user = User.first(:user_key => user_key)
-    if user.nil?
-      ret = {:success => 0, :errors => ''}
-    else
-      leadSources = user.leadTypes(:id => params[:id]).leadSources.all()
-      ret = {:success => 1, :errors => '', :sources => leadSources}
-    end
-    ret.to_json
-  end
-
+  # return all starges for lead type id ':id'
   get '/api/stages/:id' do
     user_key = env['HTTP_AUTH_KEY']
     user = User.first(:user_key => user_key)
@@ -261,6 +285,7 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
+  # Logout user
   get '/logout' do
     user_key = env['HTTP_AUTH_KEY']
     user = User.first(:user_key => user_key)
