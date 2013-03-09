@@ -209,13 +209,14 @@ Leadtraker.controllers  do
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
     else
-      leadType = user.leadTypes.get(params[:lead_type_id])
-      leadStage = LeadStage.new(:name => params[:stage_name], :leadTypes => leadType)
-      if leadStage.valid?
-        leadStage.save
+      leadtype = user.leadTypes.get(params[:lead_type_id])
+      leadstage = LeadStage.new(:name => params[:stage_name])
+      leadtype.leadStages << leadstage
+      if leadtype.valid?
+        success = leadtype.save
         # rescue DataMapper::SaveFailureError => e
         # logger.error e.resource.errors.inspect
-        ret = {:success => 1}
+        ret = {:id => leadstage.id}
         status 200
       else
         errors = user.errors.to_hash
@@ -229,7 +230,32 @@ Leadtraker.controllers  do
 
   # update lead stage param[:stage_name]
   put '/api/stages/:stage_id' do
-
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+    else
+      leadstage = user.leadTypes.leadStages.get(params[:stage_id])
+      if leadstage.valid?
+        success = leadstage.update(:name => params[:stage_name])
+        if success
+          # rescue DataMapper::SaveFailureError => e
+          # logger.error e.resource.errors.inspect
+          ret = {:success => 1}
+          status 200
+        else
+          ret = {:success => 0, :errors => ['Error while updating lead stage']}
+          status 400
+        end
+        
+      else
+        errors = leadStage.errors.to_hash
+        ret = {:success => 0, :errors => errors}
+        status 404
+      end
+    end
+    
+    ret.to_json
   end
 
   # delete lead stage id
