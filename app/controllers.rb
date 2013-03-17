@@ -443,6 +443,13 @@ Leadtraker.controllers  do
       if user.valid?
         begin
           user.contacts.save
+          user.affiliates.each do |affiliate|
+            affiliate_contact = Contact.new(contact_data)
+            affiliate.contacts << affiliate_contact
+            if affiliate.valid?
+              affiliate.contacts.save
+            end
+          end
         rescue DataMapper::SaveFailureError => e
           status 400
           ret = {:success => 0, :errors => e.resource.errors}
@@ -482,6 +489,68 @@ Leadtraker.controllers  do
   # set source as 'agent referral' by default for lender
   # let lead type be null for lender.
   post '/api/leads' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      lead_data = Hash.new
+      lead_user_data = Hash.new
+
+      lead_user_data[:leadType_id] = params[:lead_type]
+      lead_user_data[:leadSource_id] = params[:source_id]
+      if params[:contacted]
+        lead_user_data[:contacted] = true
+        lead_user_data[:contact_date] = Time.now
+      end
+      lead_user_data[:contact_id] = params[:contact_id]
+      lead_user_data[:notes] = [{:text => params[:note]}]
+      lead_user_data[:user] = user
+
+      lead_data[:reference] = params[:reference]
+      lead_data[:prop_address] = params[:address]
+      lead_data[:prop_city] = params[:city]
+      lead_data[:prop_state] = params[:state]
+      lead_data[:prop_zip] = params[:zip]
+
+      #lead_user_data[:lead] = [lead_data]
+      lead_data[:leadUsers] = [lead_user_data]
+
+      #leadUser = LeadUser.new(lead_user_data)
+      lead = Lead.new(lead_data)
+      #puts lead.inspect
+      
+      if lead.valid?
+        begin
+          lead.save
+          user.affiliates.each do |affiliate|
+            lead_user_data[:user] = affiliate
+            lead_user_data[:lead_id] = lead.id
+            affiliate_lead_user = LeadUser.new(lead_user_data)
+            if affiliate_lead_user.valid?
+              affiliate_lead_user.save
+            else
+              errors = affiliate_lead_user.errors.to_hash
+              ret = {:success => 0, :errors => errors}
+              status 400
+            end
+          end
+        rescue DataMapper::SaveFailureError => e
+          status 400
+          ret = {:success => 0, :errors => e.resource.errors}
+        end
+        ret = {:id => lead.id}
+        status 201
+      else
+        #errors = user.errors.to_hash.merge(lead.errors.to_hash.merge(leadUser.errors.to_hash))
+        errors = lead.errors.to_hash
+        ret = {:success => 0, :errors => errors}
+        status 400
+      end
+    end
+
+    ret.to_json
   end
 
   # Add note to lead :id, params[:description], params[:shared]
