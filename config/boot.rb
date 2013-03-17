@@ -34,7 +34,7 @@ Bundler.require(:default, PADRINO_ENV)
 # Add your before (RE)load hooks here
 #
 Padrino.before_load do
-#DataMapper::Model.raise_on_save_failure = true
+DataMapper::Model.raise_on_save_failure = true
 end
 
 ##
@@ -42,7 +42,8 @@ end
 #
 Padrino.after_load do
   DataMapper.finalize
-  DataMapper.auto_upgrade!
+  #DataMapper.auto_upgrade!
+  #DataMapper.auto_migrate!
 end
 
 Padrino.load!

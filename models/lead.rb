@@ -12,8 +12,6 @@ class Lead
   property :created_at, DateTime
   property :updated_at, DateTime
 
-  belongs_to :leadSource
-
   has n, :leadUsers
   has n, :users, :through => :leadUsers
 

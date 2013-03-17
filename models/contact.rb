@@ -12,6 +12,9 @@ class Contact
   property :created_at, DateTime
   property :updated_at, DateTime
 
-  belongs_to :user
+  has n, :contactPhones
+  has n, :contactEmails
+
+  #belongs_to :user
 
 end

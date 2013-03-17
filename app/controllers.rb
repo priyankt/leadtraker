@@ -263,17 +263,17 @@ Leadtraker.controllers  do
     user_key = env['HTTP_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
-      status 404
       ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
     else
       stage = user.leadTypes.leadStages.get(params[:id])
       if stage.nil?
-        status 404
         ret = {:success => 0, :errors => ['Invalid Lead Stage']}
+        status 404
       else
-        status 200
         stage.destroy
         ret = {:success => 1}
+        status 200
       end
     end
     
@@ -390,18 +390,150 @@ Leadtraker.controllers  do
 
   # get email types
   get 'api/email_types' do
-    eTypes = EmailType.all()
+    eTypes = EmailType.all(:id.gt => params[:id])
     eTypes.to_json(:exclude => [:created_at, :updated_at])
   end
 
   # get phone types
   get 'api/phone_types' do
-    pTypes = PhoneType.all()
+    pTypes = PhoneType.all(:id.gt => params[:id])
     pTypes.to_json(:exclude => [:created_at, :updated_at])
   end
 
-  # Add new lead
-  post '/api/lead' do
+  # Get contacts params[:page], params[:keyword]
+  get '/api/contacts' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      if params.has_key?("keyword")
+        userContacts = user.contacts.all(:name.like => '%' + params[:keyword] + '%', :offset => (params[:page].to_i - 1) * 10, :limit => 10)
+      else
+        userContacts = user.contacts.all(:offset => (params[:page].to_i - 1) * 10, :limit => 10)
+      end
+      contacts = Array.new
+      userContacts.each do |userContact|
+        c = Hash.new
+        c = c.merge(userContact.attributes)
+        c[:contactPhones] = userContact.contactPhones.all()
+        c[:contactEmails] = userContact.contactEmails.all()
+        contacts.push(c)
+      end
+      ret = contacts
+      status 200
+    end
+
+    ret.to_json
+  end
+
+  # Save new contact params[:contact] - json, return contact_id
+  # TODO: Also save contact for lender/affiliate
+  post '/api/contacts/' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      contact_data = JSON.parse params[:contact]
+      contact = Contact.new(contact_data)
+      user.contacts << contact
+      if user.valid?
+        begin
+          user.contacts.save
+        rescue DataMapper::SaveFailureError => e
+          status 400
+          ret = {:success => 0, :errors => e.resource.errors}
+        end
+        ret = {:id => contact.id}
+        status 201
+      else
+        errors = user.errors.to_hash
+        ret = {:success => 0, :errors => errors}
+        status 400
+      end
+    end
+
+    ret.to_json
+  end
+
+  # Update contact
+  put '/api/contacts/:id' do
+  end
+
+  # Get leads, :type can be 1-active, 2-inactive, 3-closed
+  # params[:page]
+  get '/api/leads/:type' do
+    # id, type, source, reference, contactname, contact_phone, contact_email, lead_date,
+    # is_contacted
+  end
+
+  # Given lead :id, return all details of the lead
+  # Also get shared appointments & notes for this lead
+  get '/api/leads/:id' do
+    # 
+  end
+
+  # Params[:lead_type], params[:source_id], params[:reference], params[:contacted] set leaduser contact_date
+  # Params[:contact_id], params[:note], params[:address], params[:city], params[:state], params[:zip].
+  # Add leads to affiliate as well
+  # set source as 'agent referral' by default for lender
+  # let lead type be null for lender.
+  post '/api/leads' do
+  end
+
+  # Add note to lead :id, params[:description], params[:shared]
+  post '/api/notes/:id' do
+
+  end
+
+  # Update note :note_id, params[:description], params[:shared]
+  put '/api/notes/:id' do
+  end
+
+  # Add Appointment to lead :lead_id, params[:description], params[:shared]
+  # params[:dttm], params[:title]
+  post '/api/appointments/:id' do
+
+  end
+
+  # Add Appointment :appointment_id, params[:description], params[:shared]
+  # params[:dttm], params[:title]
+  put '/api/appointments/:id' do
+
+  end
+
+  # Add financial data for lead lead_id, params[:finance]
+  post '/api/finance/:id' do
+  end
+
+  # Update financial data for financial_id, params[:finance]
+  put '/api/finance/:id' do
+  end
+
+  # Update contract date params[:dttm]
+  put 'api/contract_date/:id' do
+  end
+
+  # Update closed date params[:dttm]
+  put 'api/closed_date/:id' do
+  end
+
+  # Update property address params[:address], params[:city], params[:state], params[:zip]
+  # :id is lead id
+  put 'api/property_address/:id' do
+  end
+
+  # Set contacted for lead id params[:]
+  put 'api/set_contacted/:id' do
+  end
+
+
+
+  # OLD CODE: Add new lead
+  post '/api/leads' do
     user_key = env['HTTP_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?

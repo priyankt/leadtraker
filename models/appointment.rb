@@ -6,6 +6,7 @@ class Appointment
   property :description, String
   property :title, String
   property :dttm, DateTime
+  property :shared, Boolean
   property :created_at, DateTime
   property :updated_at, DateTime
 
