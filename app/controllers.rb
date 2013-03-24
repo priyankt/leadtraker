@@ -538,15 +538,23 @@ Leadtraker.controllers  do
 
       c[:notes] = leadUser.notes
       c[:appointments] = leadUser.appointments
-      c[:finance] = leadUser.finance
+      fnance = Hash.new
+      if not leadUser.finance.nil?
+        fnance = fnance.merge(leadUser.finance.attributes)
+        fnance[:financeExpenses] = Array.new
+        leadUser.finance.financeExpenses.each do |fe|
+          fnance[:financeExpenses].push(fe)
+        end
+      end
+      c[:finance] = fnance
 
       stages = Array.new
       leadUser.leadType.leadStages.each do |defaultStageData|
         stageHash = Hash.new
         stageHash = stageHash.merge(defaultStageData.attributes)
         stageHash[:dttm] = 0
-        lead.leadStages.each do |updatedStageData|
-          if updatedStageData.id == defaultStageData.id
+        lead.stageDates.each do |updatedStageData|
+          if updatedStageData.leadStage.id == defaultStageData.id
             stageHash[:dttm] = updatedStageData.dttm
           end
         end
@@ -631,7 +639,26 @@ Leadtraker.controllers  do
 
   # Add note to lead :id, params[:description], params[:shared]
   post '/api/notes/:id' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      note = Note.new(:text => params[:description], :shared => params[:shared])
+      lu = LeadUser.first(:lead_id => params[:id])
+      lu.notes << note
+      if lu.valid?
+        lu.notes.save
+        status 201
+        ret = {:id => note.id}
+      else
+        status 400
+        ret = {:success => 0, :errors => e.resource.errors}
+      end
+    end
 
+    ret.to_json
   end
 
   # Update note :note_id, params[:description], params[:shared]
@@ -641,7 +668,26 @@ Leadtraker.controllers  do
   # Add Appointment to lead :lead_id, params[:description], params[:shared]
   # params[:dttm], params[:title]
   post '/api/appointments/:id' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      appointment = Appointment.new(:description => params[:description], :title => params[:title], :shared => params[:shared], :dttm => params[:dttm])
+      lu = LeadUser.first(:lead_id => params[:id])
+      lu.appointments << appointment
+      if lu.valid?
+        lu.appointments.save
+        status 201
+        ret = {:id => appointment.id}
+      else
+        status 400
+        ret = {:success => 0, :errors => e.resource.errors}
+      end
+    end
 
+    ret.to_json
   end
 
   # Add Appointment :appointment_id, params[:description], params[:shared]
