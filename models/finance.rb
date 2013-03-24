@@ -9,7 +9,6 @@ class Finance
   property :created_at, DateTime
   property :updated_at, DateTime
   
-  has n, :financeExpense
-  belongs_to :leadUser
-
+  has n, :financeExpenses
+  
 end

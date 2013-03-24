@@ -390,13 +390,13 @@ Leadtraker.controllers  do
 
   # get email types
   get 'api/email_types' do
-    eTypes = EmailType.all(:id.gt => params[:id])
+    eTypes = EmailType.all()
     eTypes.to_json(:exclude => [:created_at, :updated_at])
   end
 
   # get phone types
   get 'api/phone_types' do
-    pTypes = PhoneType.all(:id.gt => params[:id])
+    pTypes = PhoneType.all()
     pTypes.to_json(:exclude => [:created_at, :updated_at])
   end
 
@@ -472,15 +472,91 @@ Leadtraker.controllers  do
 
   # Get leads, :type can be 1-active, 2-inactive, 3-closed
   # params[:page]
-  get '/api/leads/:type' do
+  get '/api/leads' do
     # id, type, source, reference, contactname, contact_phone, contact_email, lead_date,
     # is_contacted
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      leadUsers = user.leadUsers.all(:status => params[:status], :offset => (params[:page].to_i - 1) * 10, :limit => 10)
+      leads = Array.new
+      leadUsers.each do |lu|
+        contact = lu.contact
+        source = lu.leadSource
+        lead = lu.lead
+        type = lu.leadType
+
+        leadHash = Hash.new
+        leadHash[:id] = lead.id
+        leadHash[:type] = type.id
+        leadHash[:source] = source.id
+        leadHash[:reference] = lead.reference
+        leadHash[:contact_name] = contact.name
+        leadHash[:contact_phone] = contact.contactPhones.first.phone
+        leadHash[:contact_email] = contact.contactEmails.first.email
+        leadHash[:lead_date] = lead.created_at
+        leadHash[:is_contacted] = lu.contacted
+
+        leads.push(leadHash)
+      end
+      ret = leads
+      status 200
+    end
+
+    ret.to_json
   end
 
   # Given lead :id, return all details of the lead
   # Also get shared appointments & notes for this lead
   get '/api/leads/:id' do
-    # 
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      lead = user.leads.get(params[:id])
+      leadUser = lead.leadUsers.first(:user => user)
+
+      c = Hash.new
+      c = c.merge(lead.attributes)
+
+      ctact = Hash.new
+      ctact = ctact.merge(leadUser.contact.attributes)
+      ctact[:contactPhones] = Array.new
+      leadUser.contact.contactPhones.each do |cp|
+        ctact[:contactPhones].push(cp)
+      end
+      ctact[:contactEmails] = Array.new
+      leadUser.contact.contactEmails.each do |ce|
+        ctact[:contactEmails].push(ce)
+      end
+      c[:contact] = ctact
+
+      c[:notes] = leadUser.notes
+      c[:appointments] = leadUser.appointments
+      c[:finance] = leadUser.finance
+
+      stages = Array.new
+      leadUser.leadType.leadStages.each do |defaultStageData|
+        stageHash = Hash.new
+        stageHash = stageHash.merge(defaultStageData.attributes)
+        stageHash[:dttm] = 0
+        lead.leadStages.each do |updatedStageData|
+          if updatedStageData.id == defaultStageData.id
+            stageHash[:dttm] = updatedStageData.dttm
+          end
+        end
+        stages.push(stageHash)
+      end
+      c[:stages] = stages
+      ret = c
+    end
+
+    ret.to_json
   end
 
   # Params[:lead_type], params[:source_id], params[:reference], params[:contacted] set leaduser contact_date
@@ -599,50 +675,15 @@ Leadtraker.controllers  do
   put 'api/set_contacted/:id' do
   end
 
+  put 'api/lead/:id/status' do
+    #params[:status]
 
-
-  # OLD CODE: Add new lead
-  post '/api/leads' do
-    user_key = env['HTTP_AUTH_KEY']
-    user = User.first(:user_key => user_key)
-    if user.nil?
-      ret = {:success => 0, :errors => ''}
-    else
-      lead_types = JSON.parse params[:lead]
-      user.leadTypes << lead_types
-      if user.valid?
-        user.save
-        # rescue DataMapper::SaveFailureError => e
-        # logger.error e.resource.errors.inspect
-        ret = {:success => 1}
-        status 200
-      else
-        errors = user.errors.to_hash
-        ret = {:success => 0, :errors => errors}
-        status 400
-      end
-    end
-
-    ret.to_json
   end
 
   get '/list' do
     @users = User.all(:order => [:id.desc], :limit => 20)
     @users.to_json(:exclude => [:passwd, :salt, :user_key ])
     #@users.to_json
-  end
-
-  get '/leadtypes' do
-    @leadTypes = LeadType.all()
-    @leadTypes.to_json()
-  end
-
-  get '/api/1' do
-    test = {
-      '1' => 'test',
-      '2' => 'test1'
-    }
-    test.to_json
   end
 
 end
