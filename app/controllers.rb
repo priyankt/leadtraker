@@ -495,15 +495,13 @@ Leadtraker.controllers  do
         leadHash[:source] = source.id
         leadHash[:reference] = lead.reference
         leadHash[:contact_name] = contact.name
-        if contact.contactPhones.length > 0
+        leadHash[:contact_phone] = null
+        leadHash[:contact_email] = null
+        if not contact.contactPhones.empty?
           leadHash[:contact_phone] = contact.contactPhones.first.phone
-        else
-          leadHash[:contact_phone] = null
         end
-        if contact.contactEmails.length > 0
+        if not contact.contactEmails.empty?
           leadHash[:contact_email] = contact.contactEmails.first.email
-        else
-          leadHash[:contact_email] = null
         end
         leadHash[:lead_date] = lead.created_at
         leadHash[:is_contacted] = lu.contacted
