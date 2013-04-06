@@ -4,8 +4,8 @@ class StageDate
   # property <name>, <type>
   property :id, Serial
   property :dttm, DateTime
-  property :created_at, DateTime
-  property :updated_at, DateTime
+  property :created_at, DateTime, :lazy => true
+  property :updated_at, DateTime, :lazy => true
 
   belongs_to :lead
   belongs_to :leadStage

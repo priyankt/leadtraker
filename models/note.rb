@@ -5,7 +5,7 @@ class Note
   property :id, Serial
   property :text, String
   property :shared, Boolean
-  property :created_at, DateTime
-  property :updated_at, DateTime
+  property :created_at, DateTime, :lazy => true
+  property :updated_at, DateTime, :lazy => true
 
 end

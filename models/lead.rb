@@ -9,8 +9,8 @@ class Lead
   property :prop_state, String
   property :prop_zip, String
   property :reference, String
-  property :created_at, DateTime
-  property :updated_at, DateTime
+  property :created_at, DateTime, :lazy => true
+  property :updated_at, DateTime, :lazy => true
 
   has n, :leadUsers
   has n, :users, :through => :leadUsers

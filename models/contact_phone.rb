@@ -7,8 +7,8 @@ class ContactPhone
 
   belongs_to :phoneType
 
-  property :created_at, DateTime
-  property :updated_at, DateTime
+  property :created_at, DateTime, :lazy => true
+  property :updated_at, DateTime, :lazy => true
 
   before :save do |phone|
       puts phone.inspect

@@ -15,8 +15,8 @@ property :id, Serial
   property :zip, String
   property :type , Integer, :required => true
   property :share_contact, Boolean, :default => true
-  property :created_at, DateTime
-  property :updated_at, DateTime
+  property :created_at, DateTime, :lazy => true
+  property :updated_at, DateTime, :lazy => true
   property :user_key, String
 
   # has n, :invitations, :child_key => [ :source_id ]
@@ -25,7 +25,7 @@ property :id, Serial
   has n, :leadTypes
   has n, :contacts
   has n, :leadUsers
-  has n, :leads, :through => :leadUsers
+  has n, :leads, 'Lead', :through => :leadUsers
   has n, :leadSources
 
   has n, :userAffiliates, :child_key => [ :lender_id ]

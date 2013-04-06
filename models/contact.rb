@@ -9,8 +9,8 @@ class Contact
   property :city, String
   property :state, String
   property :zipcode, Integer
-  property :created_at, DateTime
-  property :updated_at, DateTime
+  property :created_at, DateTime, :lazy => true
+  property :updated_at, DateTime, :lazy => true
 
   has n, :contactPhones
   has n, :contactEmails

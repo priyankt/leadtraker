@@ -6,8 +6,8 @@ class FinanceExpense
   property :description, Text
   property :percent, Float
   property :value, Float
-  property :created_at, DateTime
-  property :updated_at, DateTime
+  property :created_at, DateTime, :lazy => true
+  property :updated_at, DateTime, :lazy => true
 
   belongs_to :finance
 

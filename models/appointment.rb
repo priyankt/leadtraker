@@ -7,7 +7,7 @@ class Appointment
   property :title, String
   property :dttm, DateTime
   property :shared, Boolean
-  property :created_at, DateTime
-  property :updated_at, DateTime
+  property :created_at, DateTime, :lazy => true
+  property :updated_at, DateTime, :lazy => true
 
 end

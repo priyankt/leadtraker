@@ -495,8 +495,16 @@ Leadtraker.controllers  do
         leadHash[:source] = source.id
         leadHash[:reference] = lead.reference
         leadHash[:contact_name] = contact.name
-        leadHash[:contact_phone] = contact.contactPhones.first.phone
-        leadHash[:contact_email] = contact.contactEmails.first.email
+        if contact.contactPhones.length > 0
+          leadHash[:contact_phone] = contact.contactPhones.first.phone
+        else
+          leadHash[:contact_phone] = null
+        end
+        if contact.contactEmails.length > 0
+          leadHash[:contact_email] = contact.contactEmails.first.email
+        else
+          leadHash[:contact_email] = null
+        end
         leadHash[:lead_date] = lead.created_at
         leadHash[:is_contacted] = lu.contacted
 
@@ -654,7 +662,7 @@ Leadtraker.controllers  do
         ret = {:id => note.id}
       else
         status 400
-        ret = {:success => 0, :errors => e.resource.errors}
+        ret = {:success => 0, :errors => lu.errors.to_hash}
       end
     end
 
@@ -683,7 +691,7 @@ Leadtraker.controllers  do
         ret = {:id => appointment.id}
       else
         status 400
-        ret = {:success => 0, :errors => e.resource.errors}
+        ret = {:success => 0, :errors => lu.errors.to_hash}
       end
     end
 
@@ -712,24 +720,153 @@ Leadtraker.controllers  do
   put 'api/closed_date/:id' do
   end
 
-  # Update property address params[:address], params[:city], params[:state], params[:zip]
-  # :id is lead id
-  put 'api/property_address/:id' do
-  end
-
-  # Set contacted for lead id params[:]
-  put 'api/set_contacted/:id' do
-  end
-
+  # update status in lead_user table
   put 'api/lead/:id/status' do
     #params[:status]
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      lu = user.leadUsers.first(:lead_id => params[:id])
+      lu.status = params[:status]
+      if lu.valid?
+        lu.save
+        ret = {:success => 1}
+        status 200
+      else
+        ret = {:success => 0, :errors => lu.errors.to_hash}
+        status 200
+      end
+    end
 
+    ret.to_json
   end
 
-  get '/list' do
-    @users = User.all(:order => [:id.desc], :limit => 20)
-    @users.to_json(:exclude => [:passwd, :salt, :user_key ])
-    #@users.to_json
+  # update source in lead_user table, params[:source]
+  put 'api/lead/:id/source' do
+    #params[:source] - id
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      lu = user.leadUsers.first(:lead_id => params[:id])
+      lu.leadSource_id = params[:source]
+      if lu.valid?
+        lu.save
+        ret = {:success => 1}
+        status 200
+      else
+        ret = {:success => 0, :errors => lu.errors.to_hash}
+        status 200
+      end
+    end
+
+    ret.to_json
+  end
+
+  # update reference in lead
+  put 'api/lead/:id/reference' do
+    #params[:reference] - text
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      l = user.leads.first(:id => params[:id])
+      l.reference = params[:reference]
+      if l.valid?
+        ret = {:success => 1}
+        status 200
+      else
+        ret = {:success => 0, :errors => l.errors.to_hash}
+        status 200
+      end
+    end
+
+    ret.to_json
+  end
+
+  # update address of a lead
+  # params[:address], params[:city], params[:state], params[:zip] - text
+  put 'api/lead/:id/address' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      l = user.leads.first(:id => params[:id])
+      l.prop_address = params[:address]
+      l.prop_city = params[:city]
+      l.prop_state = params[:state]
+      l.prop_zip = params[:zip]
+      if l.valid?
+        l.save
+        ret = {:success => 1}
+        status 200
+      else
+        ret = {:success => 0, :errors => l.errors.to_hash}
+        status 200
+      end
+    end
+
+    ret.to_json
+  end
+
+  # set contacted for lead. update :contacted & contacted & contact_date in lead_user table
+  get 'api/lead/:id/set_contacted' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      lu = user.leadUsers.first(:lead_id => params[:id])
+      lu.contacted = true
+      lu.contact_date = Time.now
+      if lu.valid?
+        lu.save
+        ret = {:success => 1}
+        status 200
+      else
+        ret = {:success => 0, :errors => l.errors.to_hash}
+        status 200
+      end
+    end
+
+    ret.to_json
+  end
+
+  # update lead type for lead
+  put 'api/lead/:id/lead_type' do
+    # params[:lead_type_id] - Delete all lead stage data for this lead type
+    # update the lead_type for that lead in lead_user
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      lu = user.leadUsers.first(:lead_id => params[:id])
+      lu.lead.stageDates.all.destroy
+      lt = LeadType.get(params[:lead_type_id])
+      lu.leadType = lt
+      if lu.valid?
+        lu.save
+        ret = lt.leadStages.all
+        status 200
+      else
+        ret = {:success => 0, :errors => lu.errors.to_hash}
+        status 200
+      end
+    end
+
+    ret.to_json
   end
 
 end

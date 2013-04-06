@@ -3,13 +3,13 @@ class LeadUser
 
   # property <name>, <type>
   property :id, Serial
-  property :contacted, Boolean
-  property :status, Integer, :default => 1 # default active
+  property :contacted, Boolean, :default => false
+  property :status, Integer, :default => 1 # active = 1, inactive = 2, closed = 3
   property :contact_date, DateTime
   property :contract_date, DateTime
   property :closed_date, DateTime
-  property :created_at, DateTime
-  property :updated_at, DateTime
+  property :created_at, DateTime, :lazy => true
+  property :updated_at, DateTime, :lazy => true
 
   has n, :notes
   has n, :appointments

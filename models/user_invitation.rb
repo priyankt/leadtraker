@@ -7,7 +7,7 @@ class UserInvitation
   property :to_user, String
   property :status, Integer
 
-  property :created_at, DateTime
-  property :updated_at, DateTime
+  property :created_at, DateTime, :lazy => true
+  property :updated_at, DateTime, :lazy => true
 
 end

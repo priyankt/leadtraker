@@ -3,8 +3,8 @@ class UserAffiliate
 
   # property <name>, <type>
   property :id, Serial
-  property :created_at, DateTime
-  property :updated_at, DateTime
+  property :created_at, DateTime, :lazy => true
+  property :updated_at, DateTime, :lazy => true
 
   belongs_to :lender, 'User', :key => true
   belongs_to :agent, 'User', :key => true
