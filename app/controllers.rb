@@ -495,8 +495,8 @@ Leadtraker.controllers  do
         leadHash[:source] = source.id
         leadHash[:reference] = lead.reference
         leadHash[:contact_name] = contact.name
-        leadHash[:contact_phone] = null
-        leadHash[:contact_email] = null
+        leadHash[:contact_phone] = nil
+        leadHash[:contact_email] = nil
         if not contact.contactPhones.empty?
           leadHash[:contact_phone] = contact.contactPhones.first.phone
         end
