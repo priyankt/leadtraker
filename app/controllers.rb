@@ -723,10 +723,10 @@ Leadtraker.controllers  do
     else
       n = user.leadUsers.notes.get(params[:note_id])
       if not n.nil?
-        n.description = params[:description]
-        n.shared = params[:shared]
+        n.text = params[:text] if params.has_key?("text")
+        n.shared = params[:shared] if params.has_key?("shared")
         if n.valid?
-          n.update
+          n.save
           ret = {:success => 1}
           status 200
         else
@@ -767,7 +767,7 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
-  # Add Appointment params[:appointment_id], params[:description], params[:shared]
+  # Add Appointment params[:id], params[:description], params[:shared]
   # params[:dttm], params[:title]
   put '/api/lead/:id/appointment' do
     user_key = env['HTTP_AUTH_KEY']
@@ -778,12 +778,12 @@ Leadtraker.controllers  do
     else
       apt = user.leadUsers.appointments.get(params[:appointment_id])
       if not apt.nil?
-        apt.description = params[:description]
-        apt.shared = params[:shared]
-        apt.dttm = params[:dttm]
-        apt.title = params[:title]
+        apt.description = params[:description] if params.has_key?("description")
+        apt.shared = params[:shared] if params.has_key?("shared")
+        apt.dttm = params[:dttm] if params.has_key?("dttm")
+        apt.title = params[:title] if params.has_key?("title")
         if apt.valid?
-          apt.update
+          apt.save
           ret = {:success => 1}
           status 200
         else
@@ -808,10 +808,11 @@ Leadtraker.controllers  do
       status 404
     else
       lu = LeadUser.first(:lead_id => params[:id], :user_id => user.id)
-      lu.finance = Finance.new(params[:finance])
+      finance_data = JSON.parse params[:finance]
+      lu.finance = Finance.new(finance_data)
       if lu.valid?
         lu.save
-        ret = {:id => f.id}
+        ret = {:id => lu.finance.id}
         status 201
       else
         status 400
@@ -831,13 +832,17 @@ Leadtraker.controllers  do
       status 404
     else
       lu = LeadUser.first(:lead_id => params[:id], :user => user)
-      if lu.finance.update(params[:finance])
-        ret = {:success => 1}
-        status 200
-      else
-        status 400
-        ret = {:success => 0, :errors => lu.finance.errors.to_hash}
+      finance_data = JSON.parse params[:finance]
+      if finance_data.has_key?("financeExpenses")
+        finance_data["financeExpenses"].each do |fe_data|
+          feObj = FinanceExpense.get(fe_data["id"])
+          feObj.update(fe_data)
+        end
+        finance_data.delete("financeExpenses")
       end
+      lu.finance.update(finance_data)
+      ret = {:success => 1}
+      status 200
     end
 
     ret.to_json
@@ -854,7 +859,7 @@ Leadtraker.controllers  do
       lu = LeadUser.first(:lead_id => params[:id], :user_id => user.id)
       lu.contract_date = params[:dttm]
       if lu.valid?
-        lu.update
+        lu.save
         ret = {:success => 1}
         status 200
       else
@@ -877,7 +882,7 @@ Leadtraker.controllers  do
       lu = LeadUser.first(:lead_id => params[:id], :user_id => user.id)
       lu.closed_date = params[:dttm]
       if lu.valid?
-        lu.update
+        lu.save
         ret = {:success => 1}
         status 200
       else
@@ -949,7 +954,7 @@ Leadtraker.controllers  do
       l = user.leads.first(:id => params[:id])
       l.reference = params[:reference]
       if l.valid?
-        l.update
+        l.save
         ret = {:success => 1}
         status 200
       else
@@ -976,7 +981,7 @@ Leadtraker.controllers  do
       l.prop_state = params[:state]
       l.prop_zip = params[:zip]
       if l.valid?
-        l.update
+        l.save
         ret = {:success => 1}
         status 200
       else
@@ -1000,7 +1005,7 @@ Leadtraker.controllers  do
       lu.contacted = true
       lu.contact_date = Time.now
       if lu.valid?
-        lu.update
+        lu.save
         ret = {:success => 1}
         status 200
       else
