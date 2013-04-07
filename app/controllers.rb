@@ -688,7 +688,7 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
-  # Add note to lead :id, params[:description], params[:shared]
+  # Add note to lead :id, params[:text], params[:shared]
   post '/api/lead/:id/note' do
     user_key = env['HTTP_AUTH_KEY']
     user = User.first(:user_key => user_key)
@@ -696,7 +696,7 @@ Leadtraker.controllers  do
       ret = {:success => 0, :errors => ['Invalid User']}
       status 404
     else
-      note = Note.new(:text => params[:description], :shared => params[:shared])
+      note = Note.new(:text => params[:text], :shared => params[:shared])
       lu = LeadUser.first(:lead_id => params[:id])
       lu.notes << note
       if lu.valid?
