@@ -542,6 +542,7 @@ Leadtraker.controllers  do
         leadHash[:contact_name] = contact.name
         leadHash[:contact_phone] = nil
         leadHash[:contact_email] = nil
+
         if not contact.contactPhones.empty?
           leadHash[:contact_phone] = contact.contactPhones.first.phone
         end
@@ -550,6 +551,7 @@ Leadtraker.controllers  do
         end
         leadHash[:lead_date] = lead.created_at
         leadHash[:is_contacted] = lu.contacted
+        leadHash[:contacted_at] = lu.contact_date
 
         leads.push(leadHash)
       end
@@ -589,6 +591,9 @@ Leadtraker.controllers  do
 
       c[:notes] = leadUser.notes
       c[:appointments] = leadUser.appointments
+      c[:is_contacted] = leadUser.contacted
+      c[:contacted_at] = leadUser.contact_date
+
       fnance = Hash.new
       if not leadUser.finance.nil?
         fnance = fnance.merge(leadUser.finance.attributes)
@@ -603,7 +608,7 @@ Leadtraker.controllers  do
       leadUser.leadType.leadStages.each do |defaultStageData|
         stageHash = Hash.new
         stageHash = stageHash.merge(defaultStageData.attributes)
-        stageHash[:dttm] = 0
+        stageHash[:dttm] = nil
         lead.stageDates.each do |updatedStageData|
           if updatedStageData.leadStage.id == defaultStageData.id
             stageHash[:dttm] = updatedStageData.dttm
@@ -612,7 +617,9 @@ Leadtraker.controllers  do
         stages.push(stageHash)
       end
       c[:stages] = stages
+
       ret = c
+      status 200
     end
 
     ret.to_json
@@ -635,7 +642,7 @@ Leadtraker.controllers  do
 
       lead_user_data[:leadType_id] = params[:lead_type]
       lead_user_data[:leadSource_id] = params[:source_id]
-      if params[:contacted]
+      if not params[:contacted].nil? and not params[:contacted] == 0
         lead_user_data[:contacted] = true
         lead_user_data[:contact_date] = Time.now
       end
@@ -767,7 +774,7 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
-  # Add Appointment params[:id], params[:description], params[:shared]
+  # Add Appointment params[:appointment_id], params[:description], params[:shared]
   # params[:dttm], params[:title]
   put '/api/lead/:id/appointment' do
     user_key = env['HTTP_AUTH_KEY']
