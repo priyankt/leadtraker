@@ -838,19 +838,19 @@ Leadtraker.controllers  do
       status 404
     else
       lu = LeadUser.first(:lead_id => params[:id], :user => user)
-      lu.finance.get(params[:financial_id])
-      
-      finance_data = JSON.parse params[:finance]
-      if finance_data.has_key?("financeExpenses")
-        finance_data["financeExpenses"].each do |fe_data|
-          feObj = FinanceExpense.get(fe_data["id"])
-          feObj.update(fe_data)
-        end
-        finance_data.delete("financeExpenses")
+      f = lu.finance.get(params[:financial_id])
+
+      f.gross = params[:gross] if params.has_key?("gross")
+      f.commission = params[:commission] if params.has_key?("commission")
+
+      if lu.valid? and lu.f.valid?
+        lu.f.save
+        ret = {:success => 1}
+        status 200
+      else
+        status 400
+        ret = {:success => 0, :errors => lu.errors.to_hash.merge(f.errors.to_hash)}
       end
-      lu.finance.update(finance_data)
-      ret = {:success => 1}
-      status 200
     end
 
     ret.to_json
