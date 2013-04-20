@@ -8,12 +8,14 @@ class LeadUser
   property :contact_date, DateTime
   property :contract_date, DateTime
   property :closed_date, DateTime
+  property :gross, Float
+  property :commission, Float
   property :created_at, DateTime, :lazy => true
   property :updated_at, DateTime, :lazy => true
 
   has n, :notes
   has n, :appointments
-  has 1, :finance
+  has n, :financeExpenses
   
   belongs_to :user
   belongs_to :lead

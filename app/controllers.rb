@@ -595,12 +595,11 @@ Leadtraker.controllers  do
       c[:contacted_at] = leadUser.contact_date
 
       fnance = Hash.new
-      if not leadUser.finance.nil?
-        fnance = fnance.merge(leadUser.finance.attributes)
-        fnance[:financeExpenses] = Array.new
-        leadUser.finance.financeExpenses.each do |fe|
-          fnance[:financeExpenses].push(fe)
-        end
+      fnance[:gross] = leadUser.gross
+      fnance[:commission] = leadUser.commission
+      fnance[:financeExpenses] = Array.new
+      leadUser.financeExpenses.each do |fe|
+        fnance[:financeExpenses].push(fe)
       end
       c[:finance] = fnance
 
@@ -806,29 +805,6 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
-  # Add financial data for lead lead_id, params[:finance]
-  post '/api/lead/:id/finance' do
-    user_key = env['HTTP_AUTH_KEY']
-    user = User.first(:user_key => user_key)
-    if user.nil?
-      ret = {:success => 0, :errors => ['Invalid User']}
-      status 404
-    else
-      lu = LeadUser.first(:lead_id => params[:id], :user_id => user.id)
-      lu.finance = Finance.new( :gross => params[:gross], :commission => params[:commission])
-      if lu.valid?
-        lu.save
-        ret = {:id => lu.finance.id}
-        status 201
-      else
-        status 400
-        ret = {:success => 0, :errors => lu.errors.to_hash}
-      end
-    end
-
-    ret.to_json
-  end
-
   # Update financial data for params[:financial_id], params[:finance]
   put '/api/lead/:id/finance' do
     user_key = env['HTTP_AUTH_KEY']
@@ -838,18 +814,74 @@ Leadtraker.controllers  do
       status 404
     else
       lu = LeadUser.first(:lead_id => params[:id], :user => user)
-      f = lu.finance.get(params[:financial_id])
+      lu.gross = params[:gross] if params.has_key?("gross")
+      lu.commission = params[:commission] if params.has_key?("commission")
 
-      f.gross = params[:gross] if params.has_key?("gross")
-      f.commission = params[:commission] if params.has_key?("commission")
-
-      if lu.valid? and lu.f.valid?
-        lu.f.save
+      if lu.valid?
+        lu.save
         ret = {:success => 1}
         status 200
       else
         status 400
-        ret = {:success => 0, :errors => lu.errors.to_hash.merge(f.errors.to_hash)}
+        ret = {:success => 0, :errors => lu.errors.to_hash}
+      end
+    end
+
+    ret.to_json
+  end
+
+  # Update finance expense data for params[:description]
+  # params[:percent], params[:value]
+  post '/api/lead/:id/expense' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      lu = LeadUser.first(:lead_id => params[:id], :user => user)
+      fe = FinanceExpense.new(
+        :description => params[:description],
+        :percent => params[:percent],
+        :value => params[:value]
+      )
+
+      lu.financeExpenses << fe
+      
+      if lu.valid? and lu.financeExpenses.valid?
+        lu.financeExpenses.save
+        ret = {:success => 1}
+        status 200
+      else
+        status 400
+        ret = {:success => 0, :errors => lu.errors.to_hash.merge(lu.financeExpenses.errors.to_hash)}
+      end
+    end
+
+    ret.to_json
+  end
+
+  # update finance expense params[:expense_id]
+  put '/api/lead/:id/expense' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      lu = LeadUser.first(:lead_id => params[:id], :user => user)
+      fe = lu.financeExpenses.get(params[:expense_id])
+      fe.description = params[:description] if params.has_key?("description")
+      fe.percent = params[:percent] if params.has_key?("percent")
+      fe.value = params[:value] if params.has_key?("value")
+      
+      if fe.valid?
+        fe.save
+        ret = {:success => 1}
+        status 200
+      else
+        status 400
+        ret = {:success => 0, :errors => fe.errors.to_hash}
       end
     end
 

@@ -9,6 +9,6 @@ class FinanceExpense
   property :created_at, DateTime, :lazy => true
   property :updated_at, DateTime, :lazy => true
 
-  belongs_to :finance
+  #belongs_to :leadUser
 
 end
