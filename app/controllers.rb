@@ -642,7 +642,7 @@ Leadtraker.controllers  do
 
       lead_user_data[:leadType_id] = params[:lead_type]
       lead_user_data[:leadSource_id] = params[:source_id]
-      if not params[:contacted].nil? and not params[:contacted] == 0
+      if not params[:contacted].nil? and not params[:contacted] == "0"
         lead_user_data[:contacted] = true
         lead_user_data[:contact_date] = Time.now
       end
