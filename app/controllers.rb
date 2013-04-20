@@ -1108,4 +1108,52 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
+  # insert invitation data
+  # from curren user to params[:to_email]
+  post 'api/invite' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      ui = UserInvitation.new(:from_user => user.email, :to_user => params[:to_email])
+
+      if ui.valid?
+        ui.save
+        ret = {:id => ui.id}
+      else
+        ret = {:success => 0, :errors => ui.errors.to_hash}
+        status 400
+      end
+    end
+
+    ret.to_json
+  end
+
+  # add affiliate for user
+  # params[:invite_id]
+  post 'api/affiliate' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      ui = UserInvitation.get(params[:invite_id])
+      lender = User.get(ui.from_user)
+      ua = UserAffiliate.new(:agent_id => user.id, :lender_id => lender.id)
+
+      if ua.valid?
+        ua.save
+        ret = {:id => ua.id}
+      else
+        ret = {:success => 0, :errors => ui.errors.to_hash}
+        status 400
+      end
+    end
+
+    ret.to_json
+  end
+
 end

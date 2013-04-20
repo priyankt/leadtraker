@@ -5,7 +5,7 @@ class UserInvitation
   property :id, Serial
   property :from_user, String
   property :to_user, String
-  property :status, Integer
+  property :status, Integer, :default => 0
 
   property :created_at, DateTime, :lazy => true
   property :updated_at, DateTime, :lazy => true
