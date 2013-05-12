@@ -18,6 +18,7 @@ gem 'dm-constraints'
 gem 'dm-aggregates'
 gem 'dm-core'
 gem 'dm-serializer'
+gem 'dm-deep_cloning'
 gem 'json'
 gem 'bcrypt-ruby'
 gem 'uuidtools'
@@ -25,7 +26,7 @@ gem 'uuidtools'
 # Test requirements
 
 # Padrino Stable Gem
-gem 'padrino', '0.10.7'
+gem 'padrino', '0.11.1'
 
 # Or Padrino Edge
 # gem 'padrino', :git => 'git://github.com/padrino/padrino-framework.git'

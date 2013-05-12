@@ -700,8 +700,26 @@ Leadtraker.controllers  do
         begin
           lead.save
           user.affiliates.each do |affiliate|
+            affiliate_source = affiliate.leadSources.first(:name => 'Agent Referral')
+            # update lead source as agent refferel
+            # check if contact exists in affiliate contact
+            # if contact exists, use that contact_id
+            # else create new contact for affiliate
             lead_user_data[:user] = affiliate
+            lead_user_data[:leadSource_id] = affiliate_source.id
             lead_user_data[:lead_id] = lead.id
+            c = user.contacts.get(params[:contact_id])
+            ac = affiliate.contacts.first(:email => c.email) + affiliate.contacts.first(:phone => c.phone)
+            if ac.nil?
+              new_ac = c.deep_clone(:contactPhones, :contactEmails)
+              #new_ac.save
+              #lead_user_data[:contact_id] = new_ac.id
+              lead_user_data.delete(:contact_id)
+              lead_user_data[:contact] = new_ac
+            else
+              lead_user_data[:contact_id] = ac.id
+            end
+
             affiliate_lead_user = LeadUser.new(lead_user_data)
             if affiliate_lead_user.valid?
               affiliate_lead_user.save
