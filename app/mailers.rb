@@ -10,17 +10,10 @@
 #   via     :sendmail              # optional, to smtp if defined, otherwise sendmail
 #   render  'registration_email'
 # end
+
 #
 # You can set the default delivery settings from your app through:
 #
-#   set :delivery_method, :smtp => {
-#     :address         => 'smtp.yourserver.com',
-#     :port            => '25',
-#     :user_name       => 'user',
-#     :password        => 'pass',
-#     :authentication  => :plain, # :plain, :login, :cram_md5, no auth by default
-#     :domain          => "localhost.localdomain" # the HELO domain provided by the client to the server
-#   }
 #
 # or sendmail (default):
 #
@@ -34,5 +27,33 @@
 #
 
 Leadtraker.mailer :notifier do
-  # Message definitions here...
+  email :invitation_email do |from_email, to_email|
+    from from_email
+    to   to_email
+    subject 'Invitation to join LeadTraker'
+    locals  :from_email => from_email
+    content_type 'text/html'       # optional, defaults to plain/text
+    via     :smtp              # optional, to smtp if defined, otherwise sendmail
+    render  'invitation/invitation_email'
+  end
+
+  email :invitation_accepted_email do |from_user, to_user|
+    from from_user.email
+    to   to_user.email
+    subject 'Invitation accepted'
+    locals  :from_user => from_user, :to_user => to_user
+    content_type 'text/html'       # optional, defaults to plain/text
+    via     :smtp              # optional, to smtp if defined, otherwise sendmail
+    render  'invitation/invitation_accepted_email'
+  end
+
+  email :invitation_rejected_email do |user, from_user|
+    from user.email
+    to   from_user.email
+    subject 'Invitation rejected'
+    locals  :user => user, :from_user => from_user
+    content_type 'text/html'       # optional, defaults to plain/text
+    via     :smtp              # optional, to smtp if defined, otherwise sendmail
+    render  'invitation/invitation_rejected_email'
+  end
 end

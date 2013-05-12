@@ -3,6 +3,16 @@ class Leadtraker < Padrino::Application
   register Padrino::Mailer
   register Padrino::Helpers
 
+  set :delivery_method, :smtp => {
+    :address         => 'smtp.gmail.com',
+    :port            => '587',
+    :user_name       => 'jaganluthra@gmail.com',
+    :password        => 'jaganbangaa',
+    :authentication  => :plain, # :plain, :login, :cram_md5, no auth by default
+    :enable_starttls_auto => true
+    #:domain          => "localhost.localdomain" # the HELO domain provided by the client to the server
+  }
+
   #enable :sessions
 
   ##

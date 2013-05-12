@@ -8,5 +8,6 @@ class UserAffiliate
 
   belongs_to :lender, 'User', :key => true
   belongs_to :agent, 'User', :key => true
+  belongs_to :invite, 'UserInvitation', :key => true
 
 end

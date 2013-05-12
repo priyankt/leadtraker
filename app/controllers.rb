@@ -515,6 +515,40 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
+  # delete contact email
+  delete '/api/contact/email/:contact_email_id' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      ce = user.contacts.contactEmails.get(params[:contact_email_id])
+      ce.destroy
+      status 200
+      ret = {:success => 1}
+    end
+
+    ret.to_json
+  end
+
+  # delete contact phone
+  delete '/api/contact/phone/:contact_phone_id' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      cp = user.contacts.contactPhones.get(params[:contact_phone_id])
+      cp.destroy
+      status 200
+      ret = {:success => 1}
+    end
+
+    ret.to_json
+  end
+
   # Get leads, :type can be 1-active, 2-inactive, 3-closed
   # params[:page]
   get '/api/leads' do
@@ -1099,6 +1133,7 @@ Leadtraker.controllers  do
       if l.valid?
         l.stageDates.save
         ret = {:id => sd.id}
+        status 200
       else
         ret = {:success => 0, :errors => l.errors.to_hash}
         status 400
@@ -1118,10 +1153,12 @@ Leadtraker.controllers  do
       status 404
     else
       ui = UserInvitation.new(:from_user => user.email, :to_user => params[:to_email])
+      deliver(:notifier, :invitation_email, user.email, params[:to_email])
 
       if ui.valid?
         ui.save
         ret = {:id => ui.id}
+        status 201
       else
         ret = {:success => 0, :errors => ui.errors.to_hash}
         status 400
@@ -1131,9 +1168,8 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
-  # add affiliate for user
-  # params[:invite_id]
-  post 'api/affiliate' do
+  # accept invitation
+  post 'api/invite/accept/:invite_id' do
     user_key = env['HTTP_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
@@ -1142,11 +1178,17 @@ Leadtraker.controllers  do
     else
       ui = UserInvitation.get(params[:invite_id])
       lender = User.get(ui.from_user)
-      ua = UserAffiliate.new(:agent_id => user.id, :lender_id => lender.id)
+      ua = UserAffiliate.new(:agent_id => user.id, :lender_id => lender.id, :invide_id => params[:invite_id])
+      ui.status = 1
 
       if ua.valid?
         ua.save
+        if ui.valid?
+          ui.save
+          deliver(:notifier, :invitation_accepted_email, user, lender)
+        end
         ret = {:id => ua.id}
+        status 201
       else
         ret = {:success => 0, :errors => ui.errors.to_hash}
         status 400
@@ -1156,4 +1198,78 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
+  # reject invitation
+  put 'api/invite/reject/:invite_id' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      ui = UserInvitation.get(params[:invite_id])
+      ui.status = 2
+      if ui.valid?
+        ui.save
+        deliver(:notifier, :invitation_rejected_email, user, ui.from_user)
+        ret = {:id => ui.id}
+        status 201
+      else
+        ret = {:success => 0, :errors => ui.errors.to_hash}
+        status 400
+      end
+    end
+
+    ret.to_json
+  end
+
+  # get all received invites for user
+  get 'api/invites/received' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      invites = UserInvitation.all(:to_user => user.email)
+      ret = invites
+      status 200
+    end
+
+    ret.to_json
+  end
+
+  # get all sent invites for user
+  get 'api/invites/sent' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      invites = UserInvitation.all(:from_user => user.email)
+      ret = invites
+      status 200
+    end
+
+    ret.to_json
+  end
+
+  # Remove the given invite
+  delete 'api/invite/:invite_id' do
+    user_key = env['HTTP_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      ui = UserInvitation.get(params[:invite_id])
+      ui.destroy
+      ret = {:success => 1}
+      status 200
+    end
+
+    ret.to_json
+  end
+
 end
+
