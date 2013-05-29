@@ -22,6 +22,7 @@ gem 'dm-deep_cloning'
 gem 'json'
 gem 'bcrypt-ruby'
 gem 'uuidtools'
+gem 'tilt', '1.3.7'
 
 # Test requirements
 
