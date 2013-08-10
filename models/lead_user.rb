@@ -11,7 +11,7 @@ class LeadUser
   property :gross, Float
   property :commission, Float
   property :created_at, DateTime, :lazy => true
-  property :updated_at, DateTime, :lazy => true
+  property :updated_at, DateTime
 
   has n, :notes
   has n, :appointments

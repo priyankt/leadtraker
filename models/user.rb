@@ -28,7 +28,10 @@ class User
   has n, :leads, 'Lead', :through => :leadUsers
   has n, :leadSources
 
-  has n, :userAffiliates, :child_key => [ :lender_id ]
-  has n, :affiliates, self, :through => :userAffiliates, :via => :agent 
+  has n, :userAffiliates, :child_key => [ :agent_id ]
+  has n, :affiliates, self, :through => :userAffiliates, :via => :lender
+
+  has n, :agentAffiliates, 'UserAffiliate', :child_key => [:lender_id]
+  has n, :affiliatedAgents, self, :through => :agentAffiliates, :via => :agent
 
 end

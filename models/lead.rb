@@ -12,6 +12,7 @@ class Lead
   property :created_at, DateTime, :lazy => true
   property :updated_at, DateTime, :lazy => true
 
+  belongs_to :user #source user id
   has n, :leadUsers
   has n, :users, :through => :leadUsers
 

@@ -8,7 +8,7 @@ class Contact
   property :address, String
   property :city, String
   property :state, String
-  property :zipcode, Integer
+  property :zipcode, String
   property :created_at, DateTime, :lazy => true
   property :updated_at, DateTime, :lazy => true
 

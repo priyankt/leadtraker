@@ -9,8 +9,8 @@ Leadtraker.controllers  do
 
     invalid = false
     if request.path_info =~ /^\/api\/*/
-      if !env["HTTP_AUTH_KEY"].nil?
-        user_key = env['HTTP_AUTH_KEY']
+      if !env["HTTP_X_AUTH_KEY"].nil?
+        user_key = env['HTTP_X_AUTH_KEY']
         user = User.first(:user_key => user_key)
         if user.nil?
           invalid = true
@@ -38,9 +38,10 @@ Leadtraker.controllers  do
     if user.passwd == passwd_hash
       # assign unique auth key to this user                                                                                                                   
       user.user_key = UUIDTools::UUID.random_create
+
       if user.save
         status 201
-        ret = {:success => 1, :user_key => user.user_key}
+        ret = {:success => 1, :user_key => user.user_key, :is_agent => user.type==1}
       else
         status 401
       end
@@ -54,7 +55,7 @@ Leadtraker.controllers  do
 
   # Logout user
   get '/logout' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -72,8 +73,7 @@ Leadtraker.controllers  do
       newUser = {}
       newUser[:email] = params[:email] if params.has_key?("email")
       newUser[:type] = params[:type] if params.has_key?("type")
-      newUser[:first_name] = params[:first_name] if params.has_key?("first_name")
-      newUser[:last_name] = params[:last_name] if params.has_key?("last_name")
+      newUser[:name] = params[:name] if params.has_key?("name")
       newUser[:phone] = params[:phone] if params.has_key?("phone")
       newUser[:company] = params[:company] if params.has_key?("company")
       newUser[:address] = params[:address] if params.has_key?("address")
@@ -176,12 +176,11 @@ Leadtraker.controllers  do
         user.save
 	# rescue DataMapper::SaveFailureError => e
 	# logger.error e.resource.errors.inspect
-        ret = {:success => 1, :user_key => newUser[:user_key]}
+        ret = {:success => 1, :user_key => newUser[:user_key], :is_agent => user.type==1}
         status 201
       else
-        errors = user.errors.to_hash
-        ret = {:success => 0, :errors => errors}
-        status 412
+        ret = {:success => 0, :errors => get_formatted_errors(user.errors)}
+        status 400
       end
 
       ret.to_json
@@ -190,7 +189,7 @@ Leadtraker.controllers  do
 
   # return all starges for lead type id ':id'
   get '/api/stages/:id' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       status 404
@@ -204,7 +203,7 @@ Leadtraker.controllers  do
 
   # new lead stage
   post '/api/stages/:lead_type_id' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -219,8 +218,7 @@ Leadtraker.controllers  do
         ret = {:id => leadstage.id}
         status 200
       else
-        errors = user.errors.to_hash
-        ret = {:success => 0, :errors => errors}
+        ret = {:success => 0, :errors => get_formatted_errors(user.errors)}
         status 404
       end
     end
@@ -230,7 +228,7 @@ Leadtraker.controllers  do
 
   # update lead stage param[:stage_name]
   put '/api/stages/:stage_id' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -249,8 +247,7 @@ Leadtraker.controllers  do
         end
         
       else
-        errors = leadStage.errors.to_hash
-        ret = {:success => 0, :errors => errors}
+        ret = {:success => 0, :errors => get_formatted_errors(leadStage.errors)}
         status 404
       end
     end
@@ -260,7 +257,7 @@ Leadtraker.controllers  do
 
   # delete lead stage id
   delete '/api/stages/:id' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -283,7 +280,7 @@ Leadtraker.controllers  do
 
   # return all lead types for this user
   get '/api/types' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -298,7 +295,7 @@ Leadtraker.controllers  do
 
   # New lead type params[:name], params[:description]
   post '/api/types' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -311,8 +308,7 @@ Leadtraker.controllers  do
         ret = {:id => leadtype.id}
         status 200
       else
-        errors = user.errors.to_hash
-        ret = {:success => 0, :errors => errors}
+        ret = {:success => 0, :errors => get_formatted_errors(user.errors)}
         status 400
       end
     end
@@ -322,7 +318,7 @@ Leadtraker.controllers  do
 
   # rename lead type params[:name], params[:description]
   put '/api/types/:id' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -349,7 +345,7 @@ Leadtraker.controllers  do
 
   # return all sources for this user
   get '/api/sources' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -366,7 +362,7 @@ Leadtraker.controllers  do
 
   # new source params[:name]
   post '/api/sources' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -379,8 +375,7 @@ Leadtraker.controllers  do
         ret = {:id => source.id}
         status 200
       else
-        errors = user.errors.to_hash
-        ret = {:success => 0, :errors => errors}
+        ret = {:success => 0, :errors => get_formatted_errors(user.errors)}
         status 400
       end
     end
@@ -402,7 +397,7 @@ Leadtraker.controllers  do
 
   # Get contacts params[:page], params[:keyword]
   get '/api/contacts' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -428,10 +423,43 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
+  # Get contacts params[:page], params[:keyword]
+  get '/api/contacts/lookup' do
+    user_key = env['HTTP_X_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 400
+    else
+      phone = params[:phone] if params.has_key?("phone")
+      c = Hash.new
+      if params.has_key?("email")
+        contactEmail = user.contacts.contactEmails.first(:email => params[:email] )
+        userContact = user.contacts.get(contactEmail.contact_id) if not contactEmail.nil?
+      end
+
+      if params.has_key?("phone") and userContact.nil?
+        contactPhone = user.contacts.contactPhones.first(:phone => params[:phone] )
+        userContact = user.contacts.get(contactPhone.contact_id) if not contactPhone.nil?
+      end
+
+      if not userContact.nil?
+        c = c.merge(userContact.attributes)
+        c[:contactPhones] = userContact.contactPhones.all()
+        c[:contactEmails] = userContact.contactEmails.all()
+      end
+      
+      ret = c
+      status 200
+    end
+
+    ret.to_json
+  end
+
   # Save new contact params[:contact] - json, return contact_id
   # TODO: Also save contact for lender/affiliate
   post '/api/contacts/' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -454,11 +482,10 @@ Leadtraker.controllers  do
           status 201
         rescue DataMapper::SaveFailureError => e
           status 400
-          ret = {:success => 0, :errors => e.resource.errors}
+          ret = {:success => 0, :errors => get_formatted_errors(e.resource.errors)}
         end
       else
-        errors = user.errors.to_hash
-        ret = {:success => 0, :errors => errors}
+        ret = {:success => 0, :errors => get_formatted_errors(user.errors)}
         status 400
       end
     end
@@ -468,7 +495,7 @@ Leadtraker.controllers  do
 
   # Update contact
   put '/api/contacts/:id' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -479,10 +506,11 @@ Leadtraker.controllers  do
         contact_data = JSON.parse params[:contact]
         # iterate over phones
         contact_data["contactPhones"].each do |phone|
-          if phone.has_key?("id")
+          if phone["id"] > 0
             phoneObj = c.contactPhones.get(phone["id"])
             phoneObj.update(phone)
           else
+            phone.delete("id")
             phoneObj = ContactPhone.new(phone)
             c.contactPhones << phoneObj
             c.save
@@ -490,10 +518,11 @@ Leadtraker.controllers  do
         end
         # iterate over emails
         contact_data["contactEmails"].each do |email|
-          if email.has_key?("id")
+          if email["id"] > 0
             emailObj = c.contactEmails.get(email["id"])
             emailObj.update(email)
           else
+            email.delete("id")
             emailObj = ContactEmail.new(email)
             c.contactEmails << emailObj
             c.save
@@ -508,7 +537,7 @@ Leadtraker.controllers  do
         # TODO: Update affiliate contact as well
       rescue DataMapper::SaveFailureError => e
         status 400
-        ret = {:success => 0, :errors => e.resource.errors}
+        ret = {:success => 0, :errors => get_formatted_errors(e.resource.errors)}
       end
     end
 
@@ -517,7 +546,7 @@ Leadtraker.controllers  do
 
   # delete contact email
   delete '/api/contact/email/:contact_email_id' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -534,7 +563,7 @@ Leadtraker.controllers  do
 
   # delete contact phone
   delete '/api/contact/phone/:contact_phone_id' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -549,24 +578,25 @@ Leadtraker.controllers  do
     ret.to_json
   end
 
-  # Get leads, :type can be 1-active, 2-inactive, 3-closed
+  # Get leads, :status can be 1-active, 2-inactive, 3-closed
   # params[:page]
   get '/api/leads' do
     # id, type, source, reference, contactname, contact_phone, contact_email, lead_date,
     # is_contacted
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
       status 404
     else
-      leadUsers = user.leadUsers.all(:status => params[:status], :offset => (params[:page].to_i - 1) * 10, :limit => 10)
+      leadUsers = user.leadUsers.all(:status => params[:status], :order => [ :updated_at.desc ], :offset => (params[:page].to_i - 1) * 10, :limit => 10)
       leads = Array.new
       leadUsers.each do |lu|
         contact = lu.contact
         source = lu.leadSource
         lead = lu.lead
         type = lu.leadType
+        source_user = lu.lead.user
 
         leadHash = Hash.new
         leadHash[:id] = lead.id
@@ -576,6 +606,7 @@ Leadtraker.controllers  do
         leadHash[:contact_name] = contact.name
         leadHash[:contact_phone] = nil
         leadHash[:contact_email] = nil
+        leadHash[:source_user_name] = source_user.name
 
         if not contact.contactPhones.empty?
           leadHash[:contact_phone] = contact.contactPhones.first.phone
@@ -599,15 +630,16 @@ Leadtraker.controllers  do
   # Given lead :id, return all details of the lead
   # Also get shared appointments & notes for this lead
   get '/api/leads/:id' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
       status 404
     else
       lead = user.leads.get(params[:id])
-      leadUser = lead.leadUsers.first(:user => user)
-
+      leadUser = LeadUser.first(:lead_id => lead.id, :user_id => user.id) # lead.leadUsers.first(:user => user)
+      affiliateLeadUsers = LeadUser.all(:lead_id => lead.id) - leadUser
+      
       c = Hash.new
       c = c.merge(lead.attributes)
 
@@ -623,10 +655,23 @@ Leadtraker.controllers  do
       end
       c[:contact] = ctact
 
-      c[:notes] = leadUser.notes
-      c[:appointments] = leadUser.appointments
+      notes = leadUser.notes
+      
+      appointments = Array.new
+      appointments = leadUser.appointments
+
+      affiliateLeadUsers.each do |alu|
+        notes.concat(alu.notes.all(:shared => true))
+        appointments.concat(alu.appointments.all(:shared => true))
+      end
+
+      c[:notes] = notes
+      c[:appointments] = appointments
+
       c[:is_contacted] = leadUser.contacted
       c[:contacted_at] = leadUser.contact_date
+      c[:closed_date] = leadUser.closed_date
+      c[:contract_date] = leadUser.contract_date
 
       fnance = Hash.new
       fnance[:gross] = leadUser.gross
@@ -664,7 +709,7 @@ Leadtraker.controllers  do
   # set source as 'agent referral' by default for lender
   # let lead type be null for lender.
   post '/api/leads' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -688,6 +733,7 @@ Leadtraker.controllers  do
       lead_data[:prop_city] = params[:city]
       lead_data[:prop_state] = params[:state]
       lead_data[:prop_zip] = params[:zip]
+      lead_data[:user_id] = user.id
 
       #lead_user_data[:lead] = [lead_data]
       lead_data[:leadUsers] = [lead_user_data]
@@ -709,7 +755,25 @@ Leadtraker.controllers  do
             lead_user_data[:leadSource_id] = affiliate_source.id
             lead_user_data[:lead_id] = lead.id
             c = user.contacts.get(params[:contact_id])
-            ac = affiliate.contacts.first(:email => c.email) + affiliate.contacts.first(:phone => c.phone)
+            
+            emails = Array.new
+            c.contactEmails.all(:fields => [:email]).each do |ce|
+              emails.push(ce.email)
+            end
+
+            affiliateContactEmail = affiliate.contacts.contactEmails.first(:email => emails )
+            ac = affiliate.contacts.get(affiliateContactEmail.contact_id) if not affiliateContactEmail.nil?
+            
+            if ac.nil?
+              phones = Array.new
+              c.contactPhones.all(:fields => [:phone]).each do |cp|
+                phones.push(cp.phone)
+              end
+              puts phones.inspect
+              affiliateContactPhone = affiliate.contacts.contactPhones.first(:phone => phones )
+              ac = affiliate.contacts.get(affilaiteContactPhone.contact_id) if not affiliateContactPhone.nil?
+            end
+
             if ac.nil?
               new_ac = c.deep_clone(:contactPhones, :contactEmails)
               #new_ac.save
@@ -724,21 +788,19 @@ Leadtraker.controllers  do
             if affiliate_lead_user.valid?
               affiliate_lead_user.save
             else
-              errors = affiliate_lead_user.errors.to_hash
-              ret = {:success => 0, :errors => errors}
+              ret = {:success => 0, :errors => get_formatted_errors(affiliate_lead_user.errors)}
               status 400
             end
           end
         rescue DataMapper::SaveFailureError => e
           status 400
-          ret = {:success => 0, :errors => e.resource.errors}
+          ret = {:success => 0, :errors => get_formatted_errors(e.resource.errors)}
         end
         ret = {:id => lead.id}
         status 201
       else
         #errors = user.errors.to_hash.merge(lead.errors.to_hash.merge(leadUser.errors.to_hash))
-        errors = lead.errors.to_hash
-        ret = {:success => 0, :errors => errors}
+        ret = {:success => 0, :errors => get_formatted_errors(lead.errors)}
         status 400
       end
     end
@@ -748,7 +810,7 @@ Leadtraker.controllers  do
 
   # Add note to lead :id, params[:text], params[:shared]
   post '/api/lead/:id/note' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -763,7 +825,7 @@ Leadtraker.controllers  do
         ret = {:id => note.id}
       else
         status 400
-        ret = {:success => 0, :errors => lu.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(lu.errors)}
       end
     end
 
@@ -773,7 +835,7 @@ Leadtraker.controllers  do
   # Update note params[:note_id], params[:description], params[:shared]
   # id is lead id
   put '/api/lead/:id/note' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -789,7 +851,7 @@ Leadtraker.controllers  do
           status 200
         else
           status 400
-          ret = {:success => 0, :errors => n.errors.to_hash}  
+          ret = {:success => 0, :errors => get_formatted_errors(n.errors)}  
         end
       else
         status 400
@@ -803,7 +865,7 @@ Leadtraker.controllers  do
   # Add Appointment to lead :lead_id, params[:description], params[:shared]
   # params[:dttm], params[:title]
   post '/api/lead/:id/appointment' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -818,7 +880,7 @@ Leadtraker.controllers  do
         ret = {:id => appointment.id}
       else
         status 400
-        ret = {:success => 0, :errors => lu.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(lu.errors)}
       end
     end
 
@@ -828,7 +890,7 @@ Leadtraker.controllers  do
   # Add Appointment params[:appointment_id], params[:description], params[:shared]
   # params[:dttm], params[:title]
   put '/api/lead/:id/appointment' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -846,7 +908,7 @@ Leadtraker.controllers  do
           status 200
         else
           status 400
-          ret = {:success => 0, :errors => apt.errors.to_hash}  
+          ret = {:success => 0, :errors => get_formatted_errors(apt.errors)}  
         end
       else
         status 400
@@ -859,7 +921,7 @@ Leadtraker.controllers  do
 
   # Update financial data for params[:financial_id], params[:finance]
   put '/api/lead/:id/finance' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -875,7 +937,7 @@ Leadtraker.controllers  do
         status 200
       else
         status 400
-        ret = {:success => 0, :errors => lu.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(lu.errors)}
       end
     end
 
@@ -885,7 +947,7 @@ Leadtraker.controllers  do
   # Update finance expense data for params[:description]
   # params[:percent], params[:value]
   post '/api/lead/:id/expense' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -899,14 +961,15 @@ Leadtraker.controllers  do
       )
 
       lu.financeExpenses << fe
+      puts fe.inspect
       
-      if lu.valid? and lu.financeExpenses.valid?
+      if lu.valid?
         lu.financeExpenses.save
-        ret = {:success => 1}
+        ret = {:id => fe.id}
         status 200
       else
         status 400
-        ret = {:success => 0, :errors => lu.errors.to_hash.merge(lu.financeExpenses.errors.to_hash)}
+        ret = {:success => 0, :errors => get_formatted_errors(lu.errors).push( get_formatted_errors(lu.financeExpenses.errors)) }
       end
     end
 
@@ -915,7 +978,7 @@ Leadtraker.controllers  do
 
   # update finance expense params[:expense_id]
   put '/api/lead/:id/expense' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -923,6 +986,7 @@ Leadtraker.controllers  do
     else
       lu = LeadUser.first(:lead_id => params[:id], :user => user)
       fe = lu.financeExpenses.get(params[:expense_id])
+      puts fe.inspect
       fe.description = params[:description] if params.has_key?("description")
       fe.percent = params[:percent] if params.has_key?("percent")
       fe.value = params[:value] if params.has_key?("value")
@@ -933,7 +997,7 @@ Leadtraker.controllers  do
         status 200
       else
         status 400
-        ret = {:success => 0, :errors => fe.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(fe.errors)}
       end
     end
 
@@ -942,7 +1006,7 @@ Leadtraker.controllers  do
 
   # Update contract date params[:dttm]
   put 'api/lead/:id/contract_date' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -956,7 +1020,7 @@ Leadtraker.controllers  do
         status 200
       else
         status 400
-        ret = {:success => 0, :errors => lu.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(lu.errors)}
       end
     end
 
@@ -965,7 +1029,7 @@ Leadtraker.controllers  do
 
   # Update closed date params[:dttm]
   put 'api/lead/:id/closed_date' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -979,7 +1043,7 @@ Leadtraker.controllers  do
         status 200
       else
         status 400
-        ret = {:success => 0, :errors => lu.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(lu.errors)}
       end
     end
 
@@ -989,7 +1053,7 @@ Leadtraker.controllers  do
   # update status in lead_user table
   put 'api/lead/:id/status' do
     #params[:status]
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -1002,7 +1066,7 @@ Leadtraker.controllers  do
         ret = {:success => 1}
         status 200
       else
-        ret = {:success => 0, :errors => lu.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(lu.errors)}
         status 400
       end
     end
@@ -1013,7 +1077,7 @@ Leadtraker.controllers  do
   # update source in lead_user table, params[:source]
   put 'api/lead/:id/source' do
     #params[:source] - id
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -1026,7 +1090,7 @@ Leadtraker.controllers  do
         ret = {:success => 1}
         status 200
       else
-        ret = {:success => 0, :errors => lu.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(lu.errors)}
         status 400
       end
     end
@@ -1037,7 +1101,7 @@ Leadtraker.controllers  do
   # update reference in lead
   put 'api/lead/:id/reference' do
     #params[:reference] - text
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -1050,7 +1114,7 @@ Leadtraker.controllers  do
         ret = {:success => 1}
         status 200
       else
-        ret = {:success => 0, :errors => l.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(l.errors)}
         status 400
       end
     end
@@ -1061,7 +1125,7 @@ Leadtraker.controllers  do
   # update address of a lead
   # params[:address], params[:city], params[:state], params[:zip] - text
   put 'api/lead/:id/address' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -1077,7 +1141,7 @@ Leadtraker.controllers  do
         ret = {:success => 1}
         status 200
       else
-        ret = {:success => 0, :errors => l.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(l.errors)}
         status 400
       end
     end
@@ -1087,7 +1151,7 @@ Leadtraker.controllers  do
 
   # set contacted for lead. update :contacted & contacted & contact_date in lead_user table
   get 'api/lead/:id/set_contacted' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -1101,7 +1165,7 @@ Leadtraker.controllers  do
         ret = {:success => 1}
         status 200
       else
-        ret = {:success => 0, :errors => l.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(l.errors)}
         status 400
       end
     end
@@ -1113,7 +1177,7 @@ Leadtraker.controllers  do
   put 'api/lead/:id/lead_type' do
     # params[:lead_type_id] - Delete all lead stage data for this lead type
     # update the lead_type for that lead in lead_user
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -1128,7 +1192,7 @@ Leadtraker.controllers  do
         ret = lt.leadStages.all
         status 200
       else
-        ret = {:success => 0, :errors => lu.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(lu.errors)}
         status 400
       end
     end
@@ -1139,7 +1203,7 @@ Leadtraker.controllers  do
   # insert stage in stage_date
   post 'api/lead/:id/stage' do
     # params[:stage_id], params[:dttm]
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -1153,7 +1217,7 @@ Leadtraker.controllers  do
         ret = {:id => sd.id}
         status 200
       else
-        ret = {:success => 0, :errors => l.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(l.errors)}
         status 400
       end
     end
@@ -1164,39 +1228,57 @@ Leadtraker.controllers  do
   # insert invitation data
   # from curren user to params[:to_email]
   post 'api/invite' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
-    if user.nil?
-      ret = {:success => 0, :errors => ['Invalid User']}
-      status 404
-    else
-      ui = UserInvitation.new(:from_user => user.email, :to_user => params[:to_email])
-      deliver(:notifier, :invitation_email, user.email, params[:to_email])
-
-      if ui.valid?
-        ui.save
-        ret = {:id => ui.id}
-        status 201
-      else
-        ret = {:success => 0, :errors => ui.errors.to_hash}
-        status 400
+    begin
+      if user.nil?
+        raise 'Invalid User'
       end
+      to_user = User.first(:email => params[:to_email])
+      unless to_user.nil?
+        userAffiliate = UserAffiliate.first(:agent_id => user.id,:lender_id => to_user.id)
+        unless userAffiliate.nil?
+          raise 'Already an affiliate'
+        end
+        ui = UserInvitation.first(:from_user => user.email, :to_user => params[:to_email])
+        unless ui.nil?
+          ui.status = 0
+        else
+          ui = UserInvitation.new(:from_user => user.email, :to_user => params[:to_email])
+        end
+
+        if ui.valid?
+          ui.save
+          ret = {:id => ui.id}
+          status 201
+          # TODO: Async email sending
+          deliver(:notifier, :invitation_email, user.email, params[:to_email])
+        else
+          ret = {:success => 0, :errors => get_formatted_errors(ui.errors)}
+          status 400
+        end
+      end
+    rescue Exception => e
+      ret = {:success => 0, :errors => [e.to_s]}
+      status 400
     end
 
     ret.to_json
+
   end
 
   # accept invitation
   post 'api/invite/accept/:invite_id' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
       status 404
     else
       ui = UserInvitation.get(params[:invite_id])
-      lender = User.get(ui.from_user)
-      ua = UserAffiliate.new(:agent_id => user.id, :lender_id => lender.id, :invide_id => params[:invite_id])
+      lender = User.first(:email => ui.from_user)
+      puts ui.inspect
+      ua = UserAffiliate.new(:agent_id => user.id, :lender_id => lender.id, :invite_id => params[:invite_id])
       ui.status = 1
 
       if ua.valid?
@@ -1208,7 +1290,7 @@ Leadtraker.controllers  do
         ret = {:id => ua.id}
         status 201
       else
-        ret = {:success => 0, :errors => ui.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(ui.errors)}
         status 400
       end
     end
@@ -1218,21 +1300,22 @@ Leadtraker.controllers  do
 
   # reject invitation
   put 'api/invite/reject/:invite_id' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
       status 404
     else
       ui = UserInvitation.get(params[:invite_id])
+      from_user = User.first(:email => ui.from_user)
       ui.status = 2
       if ui.valid?
         ui.save
-        deliver(:notifier, :invitation_rejected_email, user, ui.from_user)
+        deliver(:notifier, :invitation_rejected_email, user, from_user)
         ret = {:id => ui.id}
         status 201
       else
-        ret = {:success => 0, :errors => ui.errors.to_hash}
+        ret = {:success => 0, :errors => get_formatted_errors(ui.errors)}
         status 400
       end
     end
@@ -1242,7 +1325,7 @@ Leadtraker.controllers  do
 
   # get all received invites for user
   get 'api/invites/received' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -1258,7 +1341,7 @@ Leadtraker.controllers  do
 
   # get all sent invites for user
   get 'api/invites/sent' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -1274,7 +1357,7 @@ Leadtraker.controllers  do
 
   # Remove the given invite
   delete 'api/invite/:invite_id' do
-    user_key = env['HTTP_AUTH_KEY']
+    user_key = env['HTTP_X_AUTH_KEY']
     user = User.first(:user_key => user_key)
     if user.nil?
       ret = {:success => 0, :errors => ['Invalid User']}
@@ -1283,6 +1366,28 @@ Leadtraker.controllers  do
       ui = UserInvitation.get(params[:invite_id])
       ui.destroy
       ret = {:success => 1}
+      status 200
+    end
+
+    ret.to_json
+  end
+
+  # get user affiliates
+  get 'api/affiliates' do
+    user_key = env['HTTP_X_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 404
+    else
+      if is_lender?(user)
+        puts "i am lender"
+        affiliates = user.affiliatedAgents.all
+      else
+        affiliates = user.affiliates.all
+      end
+      
+      ret = affiliates
       status 200
     end
 
