@@ -1414,5 +1414,35 @@ Leadtraker.controllers  do
     ret.to_json(:exclude => [:salt, :passwd, :created_at, :updated_at, :user_key])
   end
 
+  # edit user profile
+  put 'api/profile' do
+    user_key = env['HTTP_X_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 400
+    else
+      user[:mobile] = params[:mobile] if params.has_key?("mobile")
+      user[:phone] = params[:phone] if params.has_key?("phone")
+      user[:name] = params[:name] if params.has_key?("name")
+      user[:address] = params[:address] if params.has_key?("address")
+      user[:company] = params[:company] if params.has_key?("company")
+      user[:state] = params[:state] if params.has_key?("state")
+      user[:zip] = params[:zip] if params.has_key?("zip")
+
+      if user.valid?
+        user.save
+        ret = {:success => 1}
+        status 201
+      else
+        ret = {:success => 0, :errors => get_formatted_errors(ui.errors)}
+        status 400
+      end
+
+    end
+
+    ret.to_json
+  end
+
 end
 
