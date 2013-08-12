@@ -40,7 +40,7 @@ Leadtraker.controllers  do
       user.user_key = UUIDTools::UUID.random_create
 
       if user.save
-        status 201
+        status 200
         ret = {:success => 1, :user_key => user.user_key, :is_agent => user.type==1}
       else
         status 401
@@ -655,18 +655,27 @@ Leadtraker.controllers  do
       end
       c[:contact] = ctact
 
+      notes = Array.new
       notes = leadUser.notes
+      #notes = Note.all(:leadUser_id => leadUser.id)
       
       appointments = Array.new
       appointments = leadUser.appointments
 
-      affiliateLeadUsers.each do |alu|
-        notes.concat(alu.notes.all(:shared => true))
-        appointments.concat(alu.appointments.all(:shared => true))
-      end
-
       c[:notes] = notes
       c[:appointments] = appointments
+      
+      affiliateLeadUsers = Array.new
+      affiliateSharedAppointments = Array.new
+
+      # get each affiliate shared notes
+      affiliateLeadUsers.each do |alu|
+        affiliateSharedNotes = alu.notes.all(:shared => true)
+        affiliateSharedAppointments = alu.appointments.all(:shared => true)
+      end
+
+      c[:affiliate_notes] = notes
+      c[:affiliate_appointments] = appointments
 
       c[:is_contacted] = leadUser.contacted
       c[:contacted_at] = leadUser.contact_date
@@ -726,7 +735,7 @@ Leadtraker.controllers  do
       end
       lead_user_data[:contact_id] = params[:contact_id]
       lead_user_data[:notes] = [{:text => params[:note]}]
-      lead_user_data[:user] = user
+      lead_user_data[:user_id] = user.id
 
       lead_data[:reference] = params[:reference]
       lead_data[:prop_address] = params[:address]
@@ -740,7 +749,6 @@ Leadtraker.controllers  do
 
       #leadUser = LeadUser.new(lead_user_data)
       lead = Lead.new(lead_data)
-      #puts lead.inspect
       
       if lead.valid?
         begin
@@ -751,7 +759,7 @@ Leadtraker.controllers  do
             # check if contact exists in affiliate contact
             # if contact exists, use that contact_id
             # else create new contact for affiliate
-            lead_user_data[:user] = affiliate
+            lead_user_data[:user_id] = affiliate.id
             lead_user_data[:leadSource_id] = affiliate_source.id
             lead_user_data[:lead_id] = lead.id
             c = user.contacts.get(params[:contact_id])
@@ -769,17 +777,17 @@ Leadtraker.controllers  do
               c.contactPhones.all(:fields => [:phone]).each do |cp|
                 phones.push(cp.phone)
               end
-              puts phones.inspect
               affiliateContactPhone = affiliate.contacts.contactPhones.first(:phone => phones )
               ac = affiliate.contacts.get(affilaiteContactPhone.contact_id) if not affiliateContactPhone.nil?
             end
 
             if ac.nil?
               new_ac = c.deep_clone(:contactPhones, :contactEmails)
-              #new_ac.save
+              new_ac.user_id = affiliate.id
+              new_ac.save
               #lead_user_data[:contact_id] = new_ac.id
-              lead_user_data.delete(:contact_id)
-              lead_user_data[:contact] = new_ac
+              #lead_user_data.delete(:contact_id)
+              lead_user_data[:contact_id] = new_ac.id
             else
               lead_user_data[:contact_id] = ac.id
             end
@@ -817,7 +825,8 @@ Leadtraker.controllers  do
       status 404
     else
       note = Note.new(:text => params[:text], :shared => params[:shared])
-      lu = LeadUser.first(:lead_id => params[:id])
+      #lu = LeadUser.first(:lead_id => params[:id])
+      lu = user.leadUsers.first(:lead_id => params[:id])
       lu.notes << note
       if lu.valid?
         lu.notes.save
@@ -961,7 +970,6 @@ Leadtraker.controllers  do
       )
 
       lu.financeExpenses << fe
-      puts fe.inspect
       
       if lu.valid?
         lu.financeExpenses.save
@@ -986,7 +994,6 @@ Leadtraker.controllers  do
     else
       lu = LeadUser.first(:lead_id => params[:id], :user => user)
       fe = lu.financeExpenses.get(params[:expense_id])
-      puts fe.inspect
       fe.description = params[:description] if params.has_key?("description")
       fe.percent = params[:percent] if params.has_key?("percent")
       fe.value = params[:value] if params.has_key?("value")
@@ -1277,7 +1284,6 @@ Leadtraker.controllers  do
     else
       ui = UserInvitation.get(params[:invite_id])
       lender = User.first(:email => ui.from_user)
-      puts ui.inspect
       ua = UserAffiliate.new(:agent_id => user.id, :lender_id => lender.id, :invite_id => params[:invite_id])
       ui.status = 1
 
@@ -1381,7 +1387,6 @@ Leadtraker.controllers  do
       status 404
     else
       if is_lender?(user)
-        puts "i am lender"
         affiliates = user.affiliatedAgents.all
       else
         affiliates = user.affiliates.all
@@ -1392,6 +1397,21 @@ Leadtraker.controllers  do
     end
 
     ret.to_json
+  end
+
+  # get user profile
+  get 'api/profile' do
+    user_key = env['HTTP_X_AUTH_KEY']
+    user = User.first(:user_key => user_key)
+    if user.nil?
+      ret = {:success => 0, :errors => ['Invalid User']}
+      status 400
+    else
+      ret = user
+      status 200
+    end
+
+    ret.to_json(:exclude => [:salt, :passwd, :created_at, :updated_at, :user_key])
   end
 
 end
